@@ -165,14 +165,11 @@ def data_generator(clss, input_size, batch_size):
         pass
 
 
-
-
 def train(clss):
 
     batch_size = 32
     input_size = 224
     epochs = 20
-    n_frozen = 313
 
     n_clss = len(clss)
     n_train_samples = list()
@@ -190,7 +187,6 @@ def train(clss):
         val_generator.append(t_val_generator)
 
     model_list = SharedDenseNet(clss)
-
 
     for i in range(n_clss):
         model_list[i].compile(loss='binary_crossentropy',
@@ -234,12 +230,14 @@ def train(clss):
                 validation_steps=n_val_samples[j] // batch_size,
             )
 
-
+    for i in range(n_clss):
+        model_list[i].save_weights('../models/shared_{0}.h5'.format(clss[i]))
+        print(model_list[i].evaluate_generator(val_generator[i], steps=n_val_samples[i] // batch_size))
 
 
 if __name__ == '__main__':
 
     utils.conf()
 
-    clss = ['collar_design_labels', 'neckline_design_labels', 'neck_design_labels', 'lapel_design_labels']
+    clss = ['collar_design_labels', 'neckline_design_labels', 'neck_design_labels']
     train(clss)

@@ -80,13 +80,13 @@ def get_nb_dataset(cls):
 
 def conf(gpu=False):
 
-    num_cores = 2
+    num_cores = 4
 
     if gpu:
         num_GPU = 1
         num_CPU = 1
     else:
-        num_CPU = 2
+        num_CPU = 4
         num_GPU = 0
 
     config = tf.ConfigProto(intra_op_parallelism_threads=num_cores,

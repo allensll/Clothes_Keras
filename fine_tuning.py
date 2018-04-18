@@ -12,7 +12,7 @@ def train(cls):
 
     batch_size = 32
     input_size = 224
-    epochs = 20
+    epochs = 2
     n_frozen = 313
 
     train_generator, val_generator = utils.data_augmentation(cls, input_size, batch_size)
@@ -28,7 +28,7 @@ def train(cls):
                         optimizer=optimizers.SGD(lr=1e-4, momentum=0.9),
                         metrics=['accuracy'])
 
-    # model_final.load_weights('./models/transfer_{0}.h5'.format(cls))
+    model_final.load_weights('../models/transfer_{0}.h5'.format(cls))
 
     checkpointer = ModelCheckpoint(filepath='../models/transfer_{0}.h5'.format(cls), verbose=1,
                                    save_best_only=True)
@@ -36,16 +36,19 @@ def train(cls):
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2,
                                   patience=2, min_lr=0.00001, verbose=1)
 
-    history = model_final.fit_generator(
-        train_generator,
-        callbacks=[EarlyStopping(patience=5), reduce_lr, checkpointer],
-        steps_per_epoch=n_train_samples // batch_size,
-        epochs=epochs,
-        validation_data=val_generator,
-        validation_steps=n_val_samples // batch_size,
-    )
+    # history = model_final.fit_generator(
+    #     train_generator,
+    #     callbacks=[EarlyStopping(patience=5), reduce_lr, checkpointer],
+    #     steps_per_epoch=n_train_samples // batch_size,
+    #     epochs=epochs,
+    #     validation_data=val_generator,
+    #     validation_steps=n_val_samples // batch_size,
+    # )
 
-    utils.plot_result(cls, history)
+    # utils.plot_result(cls, history)
+
+    r = model_final.evaluate_generator(val_generator, steps=n_val_samples // batch_size)
+    print(r)
 
 
 def test():
