@@ -5,8 +5,10 @@ from __future__ import print_function
 import os
 import utils
 
-from keras.models import Model
+from keras.models import *
 from keras.layers import *
+from keras.optimizers import *
+from keras.callbacks import *
 from keras.applications.imagenet_utils import _obtain_input_shape
 from keras.applications.imagenet_utils import preprocess_input
 from keras.utils.data_utils import get_file
@@ -128,6 +130,7 @@ def SharedDenseNet(clss):
     for layer in model_list[0].layers[:n_frozen]:
         layer.trainable = False
     # model_list[2].summary()
+    return model_list
 
 
 def preprocess_input(x, data_format=None):
@@ -172,18 +175,65 @@ def train(clss):
     n_frozen = 313
 
     n_clss = len(clss)
-    n_class = list()
     n_train_samples = list()
     n_val_samples = list()
+    train_generator = list()
+    val_generator = list()
+
     for i in range(n_clss):
-        t_n_class, t_n_train_samples, t_n_val_samples = utils.get_nb_dataset(clss[i])
-        n_class.append(t_n_class)
+        _, t_n_train_samples, t_n_val_samples = utils.get_nb_dataset(clss[i])
         n_train_samples.append(t_n_train_samples)
         n_val_samples.append(t_n_val_samples)
 
-
+        t_train_generator, t_val_generator = utils.data_augmentation(clss[i], input_size, batch_size)
+        train_generator.append(t_train_generator)
+        val_generator.append(t_val_generator)
 
     model_list = SharedDenseNet(clss)
+
+
+    for i in range(n_clss):
+        model_list[i].compile(loss='binary_crossentropy',
+                              optimizer=Adam(1e-4),
+                              metrics=['accuracy'])
+    for i in range(4):
+        for j in range(n_clss):
+            history = model_list[j].fit_generator(
+                train_generator[j],
+                steps_per_epoch=n_train_samples[j] // batch_size,
+                epochs=1,
+                validation_data=val_generator[j],
+                validation_steps=n_val_samples[j] // batch_size,
+            )
+
+    for i in range(n_clss):
+        model_list[i].compile(loss='binary_crossentropy',
+                              optimizer=Adam(1e-5),
+                              metrics=['accuracy'])
+    for i in range(8):
+        for j in range(n_clss):
+            history = model_list[j].fit_generator(
+                train_generator[j],
+                steps_per_epoch=n_train_samples[j] // batch_size,
+                epochs=1,
+                validation_data=val_generator[j],
+                validation_steps=n_val_samples[j] // batch_size,
+            )
+
+    for i in range(n_clss):
+        model_list[i].compile(loss='binary_crossentropy',
+                              optimizer=Adam(1e-6),
+                              metrics=['accuracy'])
+    for i in range(2):
+        for j in range(n_clss):
+            history = model_list[j].fit_generator(
+                train_generator[j],
+                steps_per_epoch=n_train_samples[j] // batch_size,
+                epochs=1,
+                validation_data=val_generator[j],
+                validation_steps=n_val_samples[j] // batch_size,
+            )
+
 
 
 
