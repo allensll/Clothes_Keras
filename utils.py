@@ -26,22 +26,23 @@ attr = {classes[0]: ['Invisible', 'Shirt Collar', 'Peter Pan', 'Puritan Collar',
         }
 
 
-def classify(cls, attr):
+def classify(cls, attr, rate=0.9):
 
     if not os.path.exists('../dataset/{0}'.format(cls)):
         os.mkdir('../dataset/{0}'.format(cls))
         os.mkdir('../dataset/{0}/train'.format(cls))
         os.mkdir('../dataset/{0}/val'.format(cls))
 
-    file_labels = '../dataset/base/Annotations/label.csv'
+    file_labels = '../dataset/train/Annotations/label.csv'
     df_labels = pd.read_csv(file_labels, header=None)
+    df_labels = df_labels.sample(frac=1)
     df_labels.columns = ['image_id', 'class', 'label']
 
     df_cls = df_labels[(df_labels['class'] == cls)].copy()
     df_cls.reset_index(inplace=True)
     df_cls.drop('index', 1)
 
-    data_path = '../dataset/base/'
+    data_path = '../dataset/train/'
     n = len(df_cls)
     n_class = len(attr)
 
@@ -51,16 +52,20 @@ def classify(cls, attr):
         if not os.path.exists('../dataset/{0}/val/{1}'.format(cls, attr[i])):
             os.mkdir('../dataset/{0}/val/{1}'.format(cls, attr[i]))
 
-    for i in range(n):
-        print(i)
-        img_id = df_cls['image_id'][i]
-        img_label = df_cls['label'][i]
-        img_cls = attr[img_label.find('y')]
-        img_path = data_path + img_id
-        if i <= n * 0.9:
-            copy2(img_path, '../dataset/{0}/train/{1}'.format(cls, img_cls))
-        else:
-            copy2(img_path, '../dataset/{0}/val/{1}'.format(cls, img_cls))
+    for i in range(n_class):
+        cur_attr = attr[i]
+        df_cls_attr = df_cls[(df_cls.label.str[i] == 'y')].copy()
+        df_cls_attr.reset_index(inplace=True)
+        df_cls_attr.drop('index', 1)
+        n_cur_attr = len(df_cls_attr)
+        print(n_cur_attr)
+        for j in range(n_cur_attr):
+            img_id = df_cls_attr['image_id'][j]
+            img_path = data_path + img_id
+            if j <= n_cur_attr * rate:
+                copy2(img_path, '../dataset/{0}/train/{1}'.format(cls, cur_attr))
+            else:
+                copy2(img_path, '../dataset/{0}/val/{1}'.format(cls, cur_attr))
 
 
 def get_nb_dataset(cls):
@@ -83,8 +88,8 @@ def conf(gpu=False):
     num_cores = 4
 
     if gpu:
-        num_GPU = 1
-        num_CPU = 1
+        num_GPU = 2
+        num_CPU = 4
     else:
         num_CPU = 4
         num_GPU = 0

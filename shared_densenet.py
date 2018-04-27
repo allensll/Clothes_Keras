@@ -192,7 +192,7 @@ def train(clss):
         model_list[i].compile(loss='binary_crossentropy',
                               optimizer=Adam(1e-4),
                               metrics=['accuracy'])
-    for i in range(4):
+    for i in range(2):
         for j in range(n_clss):
             history = model_list[j].fit_generator(
                 train_generator[j],
@@ -206,7 +206,7 @@ def train(clss):
         model_list[i].compile(loss='binary_crossentropy',
                               optimizer=Adam(1e-5),
                               metrics=['accuracy'])
-    for i in range(8):
+    for i in range(3):
         for j in range(n_clss):
             history = model_list[j].fit_generator(
                 train_generator[j],
@@ -220,7 +220,7 @@ def train(clss):
         model_list[i].compile(loss='binary_crossentropy',
                               optimizer=Adam(1e-6),
                               metrics=['accuracy'])
-    for i in range(2):
+    for i in range(1):
         for j in range(n_clss):
             history = model_list[j].fit_generator(
                 train_generator[j],
@@ -237,7 +237,9 @@ def train(clss):
 
 if __name__ == '__main__':
 
-    utils.conf()
-
-    clss = ['collar_design_labels', 'neckline_design_labels', 'neck_design_labels']
-    train(clss)
+    # utils.conf()
+    #
+    # clss = ['collar_design_labels', 'neckline_design_labels', 'neck_design_labels', 'lapel_design_labels']
+    # train(clss)
+    for cls in utils.classes:
+        print(len(utils.attr[cls]))
