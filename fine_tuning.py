@@ -14,8 +14,8 @@ def train(cls):
 
     batch_size = 32
     input_size = 224
-    epochs = 20
-    n_frozen = 53   # 313 53
+    epochs = 5
+    n_frozen = 53   # 313 141 53
 
     train_generator, val_generator = utils.data_augmentation(cls, input_size, batch_size)
 
@@ -27,7 +27,7 @@ def train(cls):
     x = Dense(n_class, activation='softmax')(x)
     model_final = Model(model.input, x)
     model_final.compile(loss='binary_crossentropy',
-                        optimizer=optimizers.SGD(lr=1e-4, momentum=0.9),
+                        optimizer=optimizers.SGD(lr=1e-2, momentum=0.9),
                         metrics=['accuracy'])
 
     model_final.load_weights('../models/transfer_{0}.h5'.format(cls))
@@ -62,12 +62,12 @@ def train(cls):
 def train_parallel(cls):
 
     def lr_schedule(epoch, lr):
-        if epoch < 20:
-            return 1e-4
-        elif epoch < 35:
-            return 1e-5
+        if epoch < 10:
+            return 1e-2
+        elif epoch < 30:
+            return 1e-3
         else:
-            return 1e-6
+            return 1e-4
 
     class ParallelModel(Model):
         def __init__(self, ser_model, gpus):
@@ -84,7 +84,7 @@ def train_parallel(cls):
 
     batch_size = 32
     input_size = 224
-    epochs = 30
+    epochs = 35
     n_frozen = 313
 
     train_generator, val_generator = utils.data_augmentation(cls, input_size, batch_size)
@@ -98,11 +98,11 @@ def train_parallel(cls):
         x = Dense(n_class, activation='softmax')(x)
         model_final = Model(model.input, x)
 
-    model_final.load_weights('../models/transfer_{0}.h5'.format(cls))
+    # model_final.load_weights('../models/transfer_{0}.h5'.format(cls))
 
     parallel_model = ParallelModel(model_final, 2)
     parallel_model.compile(loss='binary_crossentropy',
-                        optimizer=optimizers.SGD(lr=1e-6, momentum=0.9),
+                        optimizer=optimizers.SGD(lr=1e-2, momentum=0.9),
                         metrics=['accuracy'])
 
     checkpointer = ModelCheckpoint(filepath='../models/transfer_{0}.h5'.format(cls),
@@ -114,7 +114,7 @@ def train_parallel(cls):
     #                              patience=2, min_lr=0.00001, verbose=1)
     reduce_lr = LearningRateScheduler(lr_schedule, verbose=1)
 
-    csv_logger = CSVLogger('../log/transfer_{0}.log'.format(cls), append=True)
+    csv_logger = CSVLogger('../log/transfer_{0}.log'.format(cls), append=False)
 
     history = parallel_model.fit_generator(
         train_generator,
@@ -137,9 +137,9 @@ def test():
 
 if __name__ == '__main__':
 
-    utils.conf()
+    # utils.conf()
 
-    train(utils.classes[0])
+    train_parallel(utils.classes[2])
 
     # utils.conf()
     #

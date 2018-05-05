@@ -7,6 +7,17 @@ from keras import backend as K
 from keras.preprocessing.image import ImageDataGenerator
 from shutil import copy2
 
+'''
+/fashionAI
+    /dataset
+        /downloads
+            /base
+            /train
+            /rank
+            /z_rank
+    /code
+'''
+
 classes = ['collar_design_labels', 'neckline_design_labels', 'skirt_length_labels',
                'sleeve_length_labels', 'neck_design_labels', 'coat_length_labels', 'lapel_design_labels',
                'pant_length_labels']
@@ -26,14 +37,18 @@ attr = {classes[0]: ['Invisible', 'Shirt Collar', 'Peter Pan', 'Puritan Collar',
         }
 
 
-def classify(cls, attr, rate=0.9):
+def drop_test_duplicates():
 
-    if not os.path.exists('../dataset/{0}'.format(cls)):
-        os.mkdir('../dataset/{0}'.format(cls))
-        os.mkdir('../dataset/{0}/train'.format(cls))
-        os.mkdir('../dataset/{0}/val'.format(cls))
+    file_labels = '../dataset/test_ab/Annotations/label.csv'
+    df_labels = pd.read_csv(file_labels, header=None)
+    df_labels.columns = ['image_id', 'class', 'label']
+    df_labels.drop_duplicates(subset='image_id', inplace=True)
+    df_labels.to_csv('../dataset/test_ab/Annotations/label.csv', header=None, index=False)
 
-    file_labels = '../dataset/train/Annotations/label.csv'
+
+def classify(data_path, cls, attr, rate=0.9):
+
+    file_labels = '{0}Annotations/label.csv'.format(data_path)
     df_labels = pd.read_csv(file_labels, header=None)
     df_labels = df_labels.sample(frac=1)
     df_labels.columns = ['image_id', 'class', 'label']
@@ -42,15 +57,8 @@ def classify(cls, attr, rate=0.9):
     df_cls.reset_index(inplace=True)
     df_cls.drop('index', 1)
 
-    data_path = '../dataset/train/'
     n = len(df_cls)
     n_class = len(attr)
-
-    for i in range(n_class):
-        if not os.path.exists('../dataset/{0}/train/{1}'.format(cls, attr[i])):
-            os.mkdir('../dataset/{0}/train/{1}'.format(cls, attr[i]))
-        if not os.path.exists('../dataset/{0}/val/{1}'.format(cls, attr[i])):
-            os.mkdir('../dataset/{0}/val/{1}'.format(cls, attr[i]))
 
     for i in range(n_class):
         cur_attr = attr[i]
@@ -156,10 +164,44 @@ def data_augmentation(cls, input_size, batch_size):
     return train_generator, val_generator
 
 
+def preprocess_dataset():
+
+    dataset_paths = ['../dataset/downloads/base/',
+                     '../dataset/downloads/train/',
+                     '../dataset/downloads/rank/',
+                     '../dataset/downloads/z_rank/']
+
+    os.mkdir('{0}Annotations'.format(dataset_paths[2]))
+    os.mkdir('{0}Annotations'.format(dataset_paths[3]))
+
+    rank_labels = '../dataset/downloads/fashionAI_attributes_answer_a_20180428.csv'
+    z_rank_labels = '../dataset/downloads/fashionAI_attributes_answer_b_20180428.csv'
+    df_rank = pd.read_csv(rank_labels, header=None)
+    df_z_rank = pd.read_csv(z_rank_labels, header=None)
+    df_rank.columns = ['image_id', 'class', 'label']
+    df_z_rank.columns = ['image_id', 'class', 'label']
+
+    df_z_rank = pd.concat([df_rank, df_z_rank]).drop_duplicates(subset='image_id', keep='first')
+    df_z_rank = pd.concat([df_rank, df_z_rank]).drop_duplicates(subset='image_id', keep=False)
+
+    df_rank.to_csv('{0}Annotations/label.csv'.format(dataset_paths[2]), header=None, index=False)
+    df_z_rank.to_csv('{0}Annotations/label.csv'.format(dataset_paths[3]), header=None, index=False)
+
+    for cur_cls in classes:
+        os.mkdir('../dataset/{0}'.format(cur_cls))
+        os.mkdir('../dataset/{0}/train'.format(cur_cls))
+        os.mkdir('../dataset/{0}/val'.format(cur_cls))
+        for cur_attr in attr[cur_cls]:
+            os.mkdir('../dataset/{0}/train/{1}'.format(cur_cls, cur_attr))
+            os.mkdir('../dataset/{0}/val/{1}'.format(cur_cls, cur_attr))
+
+    for i in range(len(dataset_paths)):
+        for cur_cls in classes:
+            classify(dataset_paths[i], cur_cls, attr[cur_cls])
+
+
+
+
+
 if __name__ == '__main__':
-    pass
-    # for i in range(8):
-    #     cls = classes[i]
-    #     # classify(cls, attr[cls])
-    #     n_class, n_train_samples, n_val_samples = get_nb_dataset(cls)
-    #     print([n_class, n_train_samples, n_val_samples])
+    preprocess_dataset()
