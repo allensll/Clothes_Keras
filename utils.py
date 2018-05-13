@@ -18,14 +18,16 @@ from shutil import copy2, copytree
     /code
 '''
 
+#  , 'Round Neckline', 'Sweat Heart Neck',
+                     # 'One	Shoulder Neckline'],
 classes = ['collar_design_labels', 'neckline_design_labels', 'skirt_length_labels',
                'sleeve_length_labels', 'neck_design_labels', 'coat_length_labels', 'lapel_design_labels',
                'pant_length_labels']
 
 attr = {classes[0]: ['Invisible', 'Shirt Collar', 'Peter Pan', 'Puritan Collar', 'Rib Collar'],
         classes[1]: ['Invisible', 'Strapless Neck', 'Deep V Neckline', 'Straight Neck', 'V Neckline',
-                     'Square Neckline', 'Off Shoulder', 'Round Neckline', 'Sweat Heart Neck',
-                     'One	Shoulder Neckline'],
+                     'Square Neckline', 'Off Shoulder'],
+
         classes[2]: ['Invisible', 'Short', 'Knee', 'Midi', 'Ankle', 'Floor'],
         classes[3]: ['Invisible', 'Sleeveless', 'Cup Sleeves', 'Short Sleeves', 'Elbow Sleeves', '3or4 Sleeves',
                      'Wrist Length', 'Long Sleeves', 'Extra Long Sleeves'],

@@ -14,9 +14,9 @@ def train(cls):
 
     n_class, n_train_samples, n_val_samples = utils.get_nb_dataset(cls)
 
-    batch_size = 32
+    batch_size = 64
     input_size = 224
-    epochs = 5
+    epochs = 20
     n_frozen = 53   # 313 141 53
 
     train_generator, val_generator = utils.data_augmentation(cls, input_size, batch_size)
@@ -28,7 +28,7 @@ def train(cls):
     x = GlobalAveragePooling2D()(x)
     x = Dense(n_class, activation='softmax')(x)
     model_final = Model(model.input, x)
-    model_final.compile(loss='binary_crossentropy',
+    model_final.compile(loss='categorical_crossentropy',
                         optimizer=optimizers.SGD(lr=1e-2, momentum=0.9),
                         metrics=['accuracy'])
 
@@ -38,7 +38,7 @@ def train(cls):
                                    save_best_only=True)
 
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1,
-                                  patience=2, min_lr=0.000001, verbose=1)
+                                  patience=2, min_lr=0.0001, verbose=1)
 
     csv_logger = CSVLogger('../log/transfer_{0}.log'.format(cls), append=True)
 
@@ -64,7 +64,7 @@ def train(cls):
 def train_parallel(cls):
 
     def lr_schedule(epoch, lr):
-        if epoch < 5:
+        if epoch < 10:
             return 1e-2
         elif epoch < 10:
             return 1e-3
@@ -103,7 +103,7 @@ def train_parallel(cls):
     # model_final.load_weights('../models/transfer_{0}.h5'.format(cls))
 
     parallel_model = ParallelModel(model_final, 2)
-    parallel_model.compile(loss='binary_crossentropy',
+    parallel_model.compile(loss='categorical_crossentropy',
                         optimizer=optimizers.SGD(lr=1e-2, momentum=0.9),
                         metrics=['accuracy'])
 
@@ -135,21 +135,20 @@ def train_parallel(cls):
 
 def evaluate():
 
-    for cur_cls in utils.classes:
+    for cur_cls in [utils.classes[0]]:
         n_class, n_train_samples, n_val_samples = utils.get_nb_dataset(cur_cls)
 
         batch_size = 32
         input_size = 224
 
-        train_generator, val_generator = utils.data_augmentation(cur_cls, input_size, batch_size)
-        fa = train_generator.filenames
+        _, val_generator = utils.data_augmentation(cur_cls, input_size, batch_size)
 
         model = DenseNet121(include_top=False, weights='imagenet')
         x = model.output
         x = GlobalAveragePooling2D()(x)
         x = Dense(n_class, activation='softmax')(x)
         model_final = Model(model.input, x)
-        model_final.compile(loss='binary_crossentropy',
+        model_final.compile(loss='categorical_crossentropy',
                             optimizer=optimizers.SGD(lr=1e-2, momentum=0.9),
                             metrics=['accuracy'])
 
@@ -182,7 +181,7 @@ def test(test_path='../rank/'):
         x = GlobalAveragePooling2D()(x)
         x = Dense(n_class, activation='softmax')(x)
         model_final = Model(model.input, x)
-        model_final.compile(loss='binary_crossentropy',
+        model_final.compile(loss='categorical_crossentropy',
                             optimizer=optimizers.SGD(lr=1e-2, momentum=0.9),
                             metrics=['accuracy'])
         model_final.load_weights('../models/transfer_{0}.h5'.format(cur_cls))
@@ -213,12 +212,12 @@ if __name__ == '__main__':
 
     # utils.conf()
 
-    # train_parallel(utils.classes[1])
+    train_parallel(utils.classes[5])
 
     # utils.conf()
     #
     # for i in range(1):
     #     cls = utils.classes[i]
     #     train(cls)
-
-    test()
+    # evaluate()
+    # test()
