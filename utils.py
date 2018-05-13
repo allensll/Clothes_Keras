@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import pandas as pd
 import fnmatch
 import matplotlib.pyplot as plt
@@ -149,6 +150,34 @@ def data_augmentation(cls, input_size, batch_size):
     )
 
     return train_generator, val_generator
+
+
+def ensemble_avg():
+    path = '../res'
+    csv_list = os.listdir(path)
+    if '.DS_Store' in csv_list:
+        csv_list.remove('.DS_Store')
+
+    res = list()
+    for filename in csv_list:
+        df = pd.read_csv(os.path.join(path, filename), header=None)
+        df.columns = ['image_id', 'class', 'label']
+        res.append(df)
+
+    df_avg = res[1]
+    n_sample = len(df_avg)
+    n_model = len(res)
+    for i in range(n_sample):
+        p_f = np.array([0.0] * len(df_avg['label'][i].split(';')))
+        for j in range(n_model):
+            p_s = res[j]['label'][i].split(';')
+            p_f += np.array([float(p) for p in p_s])
+        p_f /= n_model
+        p_s = ['{:5f}'.format(p) for p in p_f]
+        p = ';'.join(p_s)
+        df_avg['label'][i] = p
+
+    df_avg.to_csv('../res.csv', header=None, index=False)
 
 
 if __name__ == '__main__':
