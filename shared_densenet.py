@@ -165,14 +165,11 @@ def data_generator(clss, input_size, batch_size):
         pass
 
 
-
-
 def train(clss):
 
     batch_size = 32
     input_size = 224
     epochs = 20
-    n_frozen = 313
 
     n_clss = len(clss)
     n_train_samples = list()
@@ -191,12 +188,11 @@ def train(clss):
 
     model_list = SharedDenseNet(clss)
 
-
     for i in range(n_clss):
         model_list[i].compile(loss='binary_crossentropy',
                               optimizer=Adam(1e-4),
                               metrics=['accuracy'])
-    for i in range(4):
+    for i in range(2):
         for j in range(n_clss):
             history = model_list[j].fit_generator(
                 train_generator[j],
@@ -210,7 +206,7 @@ def train(clss):
         model_list[i].compile(loss='binary_crossentropy',
                               optimizer=Adam(1e-5),
                               metrics=['accuracy'])
-    for i in range(8):
+    for i in range(3):
         for j in range(n_clss):
             history = model_list[j].fit_generator(
                 train_generator[j],
@@ -224,7 +220,7 @@ def train(clss):
         model_list[i].compile(loss='binary_crossentropy',
                               optimizer=Adam(1e-6),
                               metrics=['accuracy'])
-    for i in range(2):
+    for i in range(1):
         for j in range(n_clss):
             history = model_list[j].fit_generator(
                 train_generator[j],
@@ -234,12 +230,16 @@ def train(clss):
                 validation_steps=n_val_samples[j] // batch_size,
             )
 
-
+    for i in range(n_clss):
+        model_list[i].save_weights('../models/shared_{0}.h5'.format(clss[i]))
+        print(model_list[i].evaluate_generator(val_generator[i], steps=n_val_samples[i] // batch_size))
 
 
 if __name__ == '__main__':
 
-    utils.conf()
-
-    clss = ['collar_design_labels', 'neckline_design_labels', 'neck_design_labels', 'lapel_design_labels']
-    train(clss)
+    # utils.conf()
+    #
+    # clss = ['collar_design_labels', 'neckline_design_labels', 'neck_design_labels', 'lapel_design_labels']
+    # train(clss)
+    for cls in utils.classes:
+        print(len(utils.attr[cls]))

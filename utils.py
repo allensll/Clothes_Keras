@@ -6,7 +6,19 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 from keras import backend as K
 from keras.preprocessing.image import ImageDataGenerator
-from shutil import copy2
+from shutil import copy2, copytree
+
+'''
+/fashionAI
+    /dataset
+        /downloads
+            /base
+            /train
+            /rank
+            /z_rank
+    /code
+    /rank
+'''
 
 classes = ['collar_design_labels', 'neckline_design_labels', 'skirt_length_labels',
                'sleeve_length_labels', 'neck_design_labels', 'coat_length_labels', 'lapel_design_labels',
@@ -16,6 +28,7 @@ attr = {classes[0]: ['Invisible', 'Shirt Collar', 'Peter Pan', 'Puritan Collar',
         classes[1]: ['Invisible', 'Strapless Neck', 'Deep V Neckline', 'Straight Neck', 'V Neckline',
                      'Square Neckline', 'Off Shoulder', 'Round Neckline', 'Sweat Heart Neck',
                      'One	Shoulder Neckline'],
+
         classes[2]: ['Invisible', 'Short', 'Knee', 'Midi', 'Ankle', 'Floor'],
         classes[3]: ['Invisible', 'Sleeveless', 'Cup Sleeves', 'Short Sleeves', 'Elbow Sleeves', '3or4 Sleeves',
                      'Wrist Length', 'Long Sleeves', 'Extra Long Sleeves'],
@@ -27,41 +40,34 @@ attr = {classes[0]: ['Invisible', 'Shirt Collar', 'Peter Pan', 'Puritan Collar',
         }
 
 
-def classify(cls, attr):
+def classify(data_path, cls, attr, rate=0.9):
 
-    if not os.path.exists('../dataset/{0}'.format(cls)):
-        os.mkdir('../dataset/{0}'.format(cls))
-        os.mkdir('../dataset/{0}/train'.format(cls))
-        os.mkdir('../dataset/{0}/val'.format(cls))
-
-    file_labels = '../dataset/base/Annotations/label.csv'
+    file_labels = '{0}Annotations/label.csv'.format(data_path)
     df_labels = pd.read_csv(file_labels, header=None)
+    df_labels = df_labels.sample(frac=1)
     df_labels.columns = ['image_id', 'class', 'label']
 
     df_cls = df_labels[(df_labels['class'] == cls)].copy()
     df_cls.reset_index(inplace=True)
     df_cls.drop('index', 1)
 
-    data_path = '../dataset/base/'
     n = len(df_cls)
     n_class = len(attr)
 
     for i in range(n_class):
-        if not os.path.exists('../dataset/{0}/train/{1}'.format(cls, attr[i])):
-            os.mkdir('../dataset/{0}/train/{1}'.format(cls, attr[i]))
-        if not os.path.exists('../dataset/{0}/val/{1}'.format(cls, attr[i])):
-            os.mkdir('../dataset/{0}/val/{1}'.format(cls, attr[i]))
-
-    for i in range(n):
-        print(i)
-        img_id = df_cls['image_id'][i]
-        img_label = df_cls['label'][i]
-        img_cls = attr[img_label.find('y')]
-        img_path = data_path + img_id
-        if i <= n * 0.9:
-            copy2(img_path, '../dataset/{0}/train/{1}'.format(cls, img_cls))
-        else:
-            copy2(img_path, '../dataset/{0}/val/{1}'.format(cls, img_cls))
+        cur_attr = attr[i]
+        df_cls_attr = df_cls[(df_cls.label.str[i] == 'y')].copy()
+        df_cls_attr.reset_index(inplace=True)
+        df_cls_attr.drop('index', 1)
+        n_cur_attr = len(df_cls_attr)
+        print(n_cur_attr)
+        for j in range(n_cur_attr):
+            img_id = df_cls_attr['image_id'][j]
+            img_path = data_path + img_id
+            if j <= n_cur_attr * rate:
+                copy2(img_path, '../dataset/{0}/train/{1}'.format(cls, cur_attr))
+            else:
+                copy2(img_path, '../dataset/{0}/val/{1}'.format(cls, cur_attr))
 
 
 def get_nb_dataset(cls):
@@ -79,15 +85,20 @@ def get_nb_dataset(cls):
     return n_class, n_train_samples, n_val_samples
 
 
+def get_nb_test(test_path):
+
+    return len(fnmatch.filter(os.listdir(os.path.join(test_path, 'test')), '*.jpg'))
+
+
 def conf(gpu=False):
 
-    num_cores = 2
+    num_cores = 4
 
     if gpu:
-        num_GPU = 1
-        num_CPU = 1
+        num_GPU = 2
+        num_CPU = 4
     else:
-        num_CPU = 2
+        num_CPU = 4
         num_GPU = 0
 
     config = tf.ConfigProto(intra_op_parallelism_threads=num_cores,
@@ -140,6 +151,7 @@ def data_augmentation(cls, input_size, batch_size):
         target_size=(input_size, input_size),
         batch_size=batch_size,
         class_mode='categorical',
+        classes=attr[cls],
     )
 
     val_generator = val_datagen.flow_from_directory(
@@ -147,9 +159,74 @@ def data_augmentation(cls, input_size, batch_size):
         target_size=(input_size, input_size),
         batch_size=batch_size,
         class_mode='categorical',
+        classes=attr[cls],
     )
 
     return train_generator, val_generator
+
+
+def test_generator(test_path_cls, input_size, batch_size):
+
+    test_datagen = ImageDataGenerator(
+        rescale=1. / 255,
+    )
+
+    test_generator = test_datagen.flow_from_directory(
+        test_path_cls,
+        target_size=(input_size, input_size),
+        batch_size=batch_size,
+        class_mode=None,
+        shuffle=False,
+    )
+
+    return test_generator
+
+
+def preprocess_dataset():
+    # '../dataset/downloads/base/',
+
+    dataset_paths = ['../dataset/downloads/train/',
+                     '../dataset/downloads/rank/',
+                     '../dataset/downloads/z_rank/']
+    if not os.path.exists('{0}Annotations'.format(dataset_paths[1])):
+        os.mkdir('{0}Annotations'.format(dataset_paths[1]))
+        os.mkdir('{0}Annotations'.format(dataset_paths[2]))
+
+        rank_labels = '../dataset/downloads/fashionAI_attributes_answer_a_20180428.csv'
+        z_rank_labels = '../dataset/downloads/fashionAI_attributes_answer_b_20180428.csv'
+        df_rank = pd.read_csv(rank_labels, header=None)
+        df_z_rank = pd.read_csv(z_rank_labels, header=None)
+        df_rank.columns = ['image_id', 'class', 'label']
+        df_z_rank.columns = ['image_id', 'class', 'label']
+
+        df_z_rank = pd.concat([df_rank, df_z_rank]).drop_duplicates(subset='image_id', keep='first')
+        df_z_rank = pd.concat([df_rank, df_z_rank]).drop_duplicates(subset='image_id', keep=False)
+
+        df_rank.to_csv('{0}Annotations/label.csv'.format(dataset_paths[1]), header=None, index=False)
+        df_z_rank.to_csv('{0}Annotations/label.csv'.format(dataset_paths[2]), header=None, index=False)
+
+    for cur_cls in classes:
+        os.mkdir('../dataset/{0}'.format(cur_cls))
+        os.mkdir('../dataset/{0}/train'.format(cur_cls))
+        os.mkdir('../dataset/{0}/val'.format(cur_cls))
+        for cur_attr in attr[cur_cls]:
+            os.mkdir('../dataset/{0}/train/{1}'.format(cur_cls, cur_attr))
+            os.mkdir('../dataset/{0}/val/{1}'.format(cur_cls, cur_attr))
+
+    for i in range(len(dataset_paths)):
+        for cur_cls in classes:
+            classify(dataset_paths[i], cur_cls, attr[cur_cls])
+
+
+def preprocess_test():
+
+    test_path = '../dataset/downloads/week-rank/Images'
+    test_question = '../dataset/downloads/week-rank/Tests/question.csv'
+    os.mkdir('../rank')
+    os.mkdir('../rank/Images')
+    copy2(test_question, '../rank/question.csv')
+    for cur_cls in classes:
+        copytree(os.path.join(test_path, cur_cls), '../rank/Images/{0}/test'.format(cur_cls))
 
 
 def ensemble_avg():
@@ -181,9 +258,4 @@ def ensemble_avg():
 
 
 if __name__ == '__main__':
-    pass
-    # for i in range(8):
-    #     cls = classes[i]
-    #     # classify(cls, attr[cls])
-    #     n_class, n_train_samples, n_val_samples = get_nb_dataset(cls)
-    #     print([n_class, n_train_samples, n_val_samples])
+    preprocess_dataset()
